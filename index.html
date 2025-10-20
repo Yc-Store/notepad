@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Not Defteri - Gelişmiş</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* Arayüzde pürüzsüz geçişler için */
+        * { transition: background-color 0.2s, color 0.2s, border-color 0.2s, transform 0.1s ease-out; }
+        body { font-family: 'Inter', sans-serif; }
+
+        /* Aktif notu vurgulamak için stil */
+        .note-item.active {
+            background-color: #4f46e5; /* indigo-600 */
+            color: white;
+            transform: scale(1.02);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+        }
+        .note-item.active .note-date {
+            color: #e0e7ff; /* indigo-200 */
+        }
+        .note-item:hover {
+             transform: scale(1.01);
+        }
+
+        /* Özel scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .dark ::-webkit-scrollbar-track { background: #1e293b; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+        .dark ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+        /* Gizli Placeholder for contenteditable */
+        #note-content-input[placeholder]:empty:before {
+            content: attr(placeholder);
+            color: #94a3b8;
+            pointer-events: none;
+            display: block;
+        }
+
+        /* Toolbar Buton Efekti */
+        .toolbar-btn {
+            @apply p-2 rounded-lg text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 active:bg-slate-300 dark:active:bg-slate-600;
+        }
+
+    </style>
+</head>
+<body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200">
+
+    <!-- Giriş Ekranı -->
+    <div id="login-screen" class="flex items-center justify-center min-h-screen">
+        <div class="p-8 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-sm w-full">
+            <div class="text-center">
+                <svg class="mx-auto h-12 w-auto text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
+                <h1 class="text-3xl font-bold mt-4 text-slate-900 dark:text-white">Giriş Yap</h1>
+                <p class="mt-2 text-slate-600 dark:text-slate-400">Notlarınıza erişmek için kullanıcı bilgilerinizi girin.</p>
+            </div>
+            <div class="mt-8 space-y-4">
+                <input id="login-username" type="text" placeholder="Kullanıcı Adı" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+                <input id="login-password" type="password" placeholder="Şifre" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+                <button id="login-button" class="w-full mt-4 px-4 py-2 font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-md">Giriş Yap</button>
+            </div>
+            <p class="mt-6 text-center text-sm text-slate-500">
+                Hesabınız yok mu? <a href="#" id="show-register-link" class="font-medium text-indigo-600 hover:text-indigo-500">Kayıt Ol</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- Kayıt Ekranı -->
+    <div id="register-screen" class="hidden items-center justify-center min-h-screen">
+         <div class="p-8 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-sm w-full">
+            <div class="text-center">
+                <svg class="mx-auto h-12 w-auto text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
+                <h1 class="text-3xl font-bold mt-4 text-slate-900 dark:text-white">Hesap Oluştur</h1>
+                <p class="mt-2 text-slate-600 dark:text-slate-400">Giriş yapmak için bir kullanıcı adı ve şifre belirleyin.</p>
+            </div>
+            <div class="mt-8 space-y-4">
+                <input id="register-username" type="text" placeholder="Kullanıcı Adı" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+                <input id="register-password" type="password" placeholder="Şifre" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+
+                <p class="text-sm text-slate-500 !mt-2 border border-dashed border-indigo-300 dark:border-indigo-600 p-3 rounded-lg bg-indigo-50 dark:bg-indigo-900/30">
+                    <span class="font-bold text-indigo-600 dark:text-indigo-300">Gizlilik Notu:</span> Notlarınız, kullanıcı adınıza özel bir dosyada (<code class="text-xs">kullanici_adi_notlari.json</code>) saklanarak diğer kullanıcılardan izole edilir.
+                </p>
+
+                <button id="register-button" class="w-full mt-4 px-4 py-2 font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-md">Kayıt Ol</button>
+            </div>
+            <p class="mt-6 text-center text-sm text-slate-500">
+                Zaten bir hesabınız var mı? <a href="#" id="show-login-link" class="font-medium text-indigo-600 hover:text-indigo-500">Giriş Yap</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- Uygulama Ekranı -->
+    <div id="app-screen" class="hidden h-screen w-screen flex flex-col">
+        <!-- Header -->
+        <header class="flex items-center justify-between p-3 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-sm flex-shrink-0">
+            <div class="flex items-center gap-3">
+                 <svg class="h-8 w-auto text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
+                <h1 class="text-xl font-bold text-slate-800 dark:text-white">Not Defteri</h1>
+            </div>
+            <div id="save-status" class="text-sm text-slate-500"></div>
+            <div class="flex items-center gap-4">
+                <!-- Karanlık Mod Geçişi -->
+                <button id="dark-mode-toggle" class="p-2 rounded-full text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition">
+                    <svg id="sun-icon" class="w-6 h-6 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1.5m0 15v1.5m9-9h-1.5M4.5 12H3m18 3.75l-1.5-1.5M4.5 7.75l1.5-1.5M16.5 18.75l-1.5-1.5M7.5 5.25l-1.5-1.5M12 18a6 6 0 100-12 6 6 0 000 12z" /></svg>
+                    <svg id="moon-icon" class="w-6 h-6 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-.81.132-1.592.378-2.34l.322-.992c.389-1.127 1.643-1.465 2.57-1.1L20.467 4.5c.783.783.783 2.05-.001 2.834z" /></svg>
+                </button>
+
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-indigo-200 dark:bg-indigo-900 flex items-center justify-center font-bold text-indigo-700 dark:text-indigo-300 text-lg" id="user-avatar"></div>
+                    <p id="user-name" class="font-semibold text-sm"></p>
+                </div>
+                <button id="signout-button" class="px-4 py-2 text-sm font-medium text-red-600 bg-red-100 dark:bg-red-900/50 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/80 transition">Çıkış Yap</button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex flex-1 overflow-hidden">
+            <!-- Not Listesi Paneli (Sidebar) -->
+            <aside class="w-1/3 max-w-xs xl:w-1/4 bg-slate-50 dark:bg-slate-800/50 border-r border-slate-200 dark:border-slate-700 flex flex-col">
+                <div class="p-3 border-b border-slate-200 dark:border-slate-700 space-y-3">
+                    <button id="new-note-button" class="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-md transform hover:scale-[1.01] transition">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" /></svg>
+                        Yeni Not
+                    </button>
+                     <!-- Arama Kutusu -->
+                    <input type="text" id="note-search-input" placeholder="Notlarda ara..." class="w-full px-4 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+                </div>
+                <div id="notes-list" class="flex-1 overflow-y-auto p-2 space-y-1">
+                    <!-- Notlar buraya eklenecek -->
+                </div>
+            </aside>
+
+            <!-- Not Düzenleyici Paneli -->
+            <section id="editor-panel" class="flex-1 flex flex-col hidden">
+                <div class="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
+                    <!-- Başlık artık salt okunur ve otomatik oluşturuluyor -->
+                    <input type="text" id="note-title-input" placeholder="Başlık metinden otomatik oluşturulur..."
+                           readonly
+                           class="text-xl font-bold bg-transparent w-full focus:outline-none
+                                  border-none text-slate-700 dark:text-slate-300 pointer-events-none">
+                    <button id="delete-note-button" class="p-2 text-slate-500 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-full transition" title="Notu Sil">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.58.22-2.365.468a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-10.52.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193v-.443A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-1.12.674-2.08 1.693-2.443A.75.75 0 0014.5 1h-5a.75.75 0 00-.693.307A2.733 2.733 0 0010 3.75v.25zM10 10.5a.75.75 0 00-1.5 0v3.5a.75.75 0 001.5 0v-3.5zM12.25 10a.75.75 0 00-.75.75v3.5a.75.75 0 001.5 0v-3.5a.75.75 0 00-.75-.75zM7.75 10a.75.75 0 00-.75.75v3.5a.75.75 0 001.5 0v-3.5a.75.75 0 00-.75-.75z" clip-rule="evenodd" /></svg>
+                    </button>
+                </div>
+
+                <!-- Editor Toolbar -->
+                <div id="editor-toolbar" class="flex items-center gap-1 p-2 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
+                    <button class="toolbar-btn" data-command="bold" title="Kalın (Ctrl+B)">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M12.42 4.026a.75.75 0 01.75-.75h1.125a.75.75 0 01.75.75v11.948a.75.75 0 01-.75.75h-1.125a.75.75 0 01-.75-.75V4.026zm-7.694 0h1.125a.75.75 0 01.75.75v11.948a.75.75 0 01-.75.75H4.726a.75.75 0 01-.75-.75V4.026a.75.75 0 01.75-.75z" clip-rule="evenodd" /></svg>
+                    </button>
+                    <button class="toolbar-btn" data-command="italic" title="İtalik (Ctrl+I)">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path d="M12.553 4.887l-3.235 11.258A.75.75 0 018.423 16h-.71a.75.75 0 010-1.5h1.22l-.462-1.608h-2.13a.75.75 0 010-1.5h2.385l.462-1.607h-2.223a.75.75 0 010-1.5h2.479l.462-1.607h-2.316a.75.75 0 010-1.5h2.57l.462-1.607h-1.92a.75.75 0 010-1.5h2.427a.75.75 0 01.733.606l.5 1.742a.75.75 0 01-.013.687l-.41 1.427h1.43a.75.75 0 01.734.606l.5 1.742a.75.75 0 01-.013.687l-.41 1.427h1.53a.75.75 0 01.733.606l.5 1.742a.75.75 0 01-.013.687l-.41 1.427h1.63a.75.75 0 01.733.606l.25.875a.75.75 0 01-.732.894h-1.125a.75.75 0 01-.75-.75v-1.125a.75.75 0 01.75-.75h.502l-.5-1.742a.75.75 0 01.013-.687l.41-1.427h-1.43a.75.75 0 01-.734-.606l-.5-1.742a.75.75 0 01.013-.687l.41-1.427h-1.53a.75.75 0 01-.733-.606l-.5-1.742a.75.75 0 01.013-.687l.41-1.427h1.125a.75.75 0 01.75-.75V4.137a.75.75 0 01-.75-.75h-1.125a.75.75 0 01-.75.75v1.125z" /></svg>
+                    </button>
+                    <button class="toolbar-btn" data-command="insertUnorderedList" title="Madde İşaretli Liste">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 4.75zm0 10.5a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75a.75.75 0 01-.75-.75zm0-5.25a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75a.75.75 0 01-.75-.75z" clip-rule="evenodd" /></svg>
+                    </button>
+                </div>
+
+                <!-- Not içeriği için contenteditable div (HTML formatını korur) -->
+                <div contenteditable="true" id="note-content-input" placeholder="Notunuzu buraya yazmaya başlayın..." class="p-6 flex-1 focus:outline-none overflow-y-auto text-lg leading-relaxed"></div>
+            </section>
+
+            <!-- Başlangıç Ekranı -->
+            <div id="welcome-panel" class="flex-1 flex flex-col items-center justify-center text-center p-8 bg-slate-50 dark:bg-slate-800/50">
+                <svg class="w-24 h-24 text-slate-300 dark:text-slate-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" /></svg>
+                <h2 class="mt-4 text-2xl font-bold text-slate-700 dark:text-slate-200">Not Defterinize Hoş Geldiniz</h2>
+                <p class="mt-2 max-w-md text-slate-500">Başlamak için sol taraftan <span class="text-indigo-500 font-semibold">"Yeni Not"</span> oluşturun veya mevcut bir notunuzu seçin.</p>
+            </div>
+        </main>
+    </div>
+
+    <!-- ÖZEL MODAL YAPISI (Uyarılar ve Onaylar İçin) -->
+    <div id="app-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden items-center justify-center transition-opacity opacity-0" aria-modal="true" role="dialog">
+        <div id="modal-content-wrapper" class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-sm transform scale-95 transition-transform">
+            <h3 id="modal-title" class="text-lg font-bold text-slate-900 dark:text-white mb-4 border-b pb-2 border-slate-200 dark:border-slate-700">Uyarı</h3>
+            <p id="modal-message" class="text-slate-600 dark:text-slate-400 mb-6"></p>
+            <div id="modal-actions" class="flex justify-end gap-3">
+                <button id="modal-cancel-button" class="hidden px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-200 dark:bg-slate-700 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600">İptal</button>
+                <button id="modal-ok-button" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700">Tamam</button>
+            </div>
+        </div>
+    </div>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    // --- GITHUB BİLGİLERİ (SADECE YAPILANDIRMA İÇİN SABİT) ---
+    const GITHUB_CONFIG = {
+        githubUser: 'Yc-Store',
+        githubRepo: 'notepad',
+        githubPat: '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',
+    };
+
+    // --- GÜVENLİK VE İZOLASYON İÇİN DİNAMİK DOSYA YOLU OLUŞTURUCU ---
+    const getNoteFilePath = (username) => {
+        const safeUsername = username.toLowerCase().replace(/[^a-z0-9]/g, '_');
+        return `notes/${safeUsername}_notlari.json`; // Notları 'notes' klasöründe saklamak en iyisidir.
+    };
+
+
+    // --- DOM ELEMENTLERİ ---
+    const loginScreen = document.getElementById('login-screen');
+    const registerScreen = document.getElementById('register-screen');
+    const appScreen = document.getElementById('app-screen');
+
+    // Auth & Navigasyon
+    const showRegisterLink = document.getElementById('show-register-link');
+    const showLoginLink = document.getElementById('show-login-link');
+    const loginButton = document.getElementById('login-button');
+    const registerButton = document.getElementById('register-button');
+    const signoutButton = document.getElementById('signout-button');
+    const darkModeToggle = document.getElementById('dark-mode-toggle');
+    const sunIcon = document.getElementById('sun-icon');
+    const moonIcon = document.getElementById('moon-icon');
+
+    // Giriş & Kayıt Form Alanları
+    const loginUsernameInput = document.getElementById('login-username');
+    const loginPasswordInput = document.getElementById('login-password');
+    const registerUsernameInput = document.getElementById('register-username');
+    const registerPasswordInput = document.getElementById('register-password');
+
+    // Uygulama Ana Ekranı
+    const notesList = document.getElementById('notes-list');
+    const noteSearchInput = document.getElementById('note-search-input');
+    const newNoteButton = document.getElementById('new-note-button');
+    const editorPanel = document.getElementById('editor-panel');
+    const welcomePanel = document.getElementById('welcome-panel');
+    const noteTitleInput = document.getElementById('note-title-input');
+    const noteContentInput = document.getElementById('note-content-input');
+    const deleteNoteButton = document.getElementById('delete-note-button');
+    const saveStatus = document.getElementById('save-status');
+    const userNameDisplay = document.getElementById('user-name');
+    const userAvatar = document.getElementById('user-avatar');
+    const editorToolbar = document.getElementById('editor-toolbar');
+
+    // Modal
+    const appModal = document.getElementById('app-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const modalMessage = document.getElementById('modal-message');
+    const modalOkButton = document.getElementById('modal-ok-button');
+    const modalCancelButton = document.getElementById('modal-cancel-button');
+
+
+    // --- UYGULAMA DURUMU (STATE) ---
+    let notes = [];
+    let activeNoteId = null;
+    let currentUser = null;
+    let fileSha = null; // GitHub'a dosya güncellemek için gereklidir.
+    let saveTimeout;
+
+    // --- UTILITY: DARK MODE ---
+    const setupDarkMode = () => {
+        const isDark = localStorage.getItem('theme') === 'dark' ||
+                       (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        if (isDark) {
+            document.body.classList.add('dark');
+            sunIcon.classList.remove('hidden');
+            moonIcon.classList.add('hidden');
+        } else {
+            document.body.classList.remove('dark');
+            moonIcon.classList.remove('hidden');
+            sunIcon.classList.add('hidden');
+        }
+    };
+
+    const toggleDarkMode = () => {
+        if (document.body.classList.contains('dark')) {
+            localStorage.setItem('theme', 'light');
+        } else {
+            localStorage.setItem('theme', 'dark');
+        }
+        setupDarkMode();
+    };
+
+    // --- UTILITY: CUSTOM MODAL ---
+
+    /**
+     * Shows a custom alert box.
+     * @param {string} message
+     * @param {string} [title='Bilgi']
+     */
+    const showAppAlert = (message, title = 'Bilgi') => {
+        modalTitle.textContent = title;
+        modalMessage.textContent = message;
+        modalCancelButton.classList.add('hidden');
+        modalOkButton.textContent = 'Tamam';
+
+        // Modalın gösterilmesi
+        appModal.classList.remove('hidden');
+        setTimeout(() => {
+            appModal.classList.add('opacity-100');
+            document.getElementById('modal-content-wrapper').classList.remove('scale-95');
+        }, 10);
+
+        return new Promise(resolve => {
+            const handleOk = () => {
+                hideModal();
+                modalOkButton.removeEventListener('click', handleOk);
+                resolve(true);
+            };
+            modalOkButton.addEventListener('click', handleOk);
+        });
+    };
+
+    /**
+     * Shows a custom confirmation box.
+     * @param {string} message
+     * @param {string} [title='Onay Gerekli']
+     */
+    const showAppConfirm = (message, title = 'Onay Gerekli') => {
+        modalTitle.textContent = title;
+        modalMessage.textContent = message;
+        modalCancelButton.classList.remove('hidden');
+        modalOkButton.textContent = 'Onayla';
+
+        // Modalın gösterilmesi
+        appModal.classList.remove('hidden');
+        setTimeout(() => {
+            appModal.classList.add('opacity-100');
+            document.getElementById('modal-content-wrapper').classList.remove('scale-95');
+        }, 10);
+
+        return new Promise(resolve => {
+            const handleOk = () => {
+                hideModal();
+                removeListeners();
+                resolve(true);
+            };
+
+            const handleCancel = () => {
+                hideModal();
+                removeListeners();
+                resolve(false);
+            };
+
+            const removeListeners = () => {
+                modalOkButton.removeEventListener('click', handleOk);
+                modalCancelButton.removeEventListener('click', handleCancel);
+            };
+
+            modalOkButton.addEventListener('click', handleOk);
+            modalCancelButton.addEventListener('click', handleCancel);
+        });
+    };
+
+    const hideModal = () => {
+        appModal.classList.remove('opacity-100');
+        document.getElementById('modal-content-wrapper').classList.add('scale-95');
+        setTimeout(() => {
+            appModal.classList.add('hidden');
+        }, 300); // Tailwind transition süresiyle eşleşmeli
+    };
+
+    // --- KULLANICI YÖNETİMİ (Local Storage Üzerinden Basit Kullanıcı Kaydı) ---
+    const getUsers = () => JSON.parse(localStorage.getItem('notebook_users') || '{}');
+    const saveUsers = (users) => localStorage.setItem('notebook_users', JSON.stringify(users));
+
+    // --- UTF-8 GÜVENLİ ENKODER/DEKODER ---
+    function encodeBase64(str) {
+        try {
+            const utf8Bytes = new TextEncoder().encode(str);
+            const binaryString = String.fromCodePoint(...utf8Bytes);
+            return btoa(binaryString);
+        } catch (e) {
+            console.error("Base64 kodlama hatası:", e);
+            return "";
+        }
+    }
+
+    function decodeBase64(base64) {
+        try {
+            const binaryString = atob(base64);
+            const utf8Bytes = Uint8Array.from(binaryString, m => m.codePointAt(0));
+            return new TextDecoder().decode(utf8Bytes);
+        } catch (e) {
+            console.error("Base64 çözme hatası:", e);
+            return "";
+        }
+    }
+
+    // --- GITHUB API FONKSİYONLARI ---
+    async function githubApiRequest(endpoint, options = {}) {
+        if (!currentUser) throw new Error("Kullanıcı girişi yapılmamış.");
+
+        const { githubPat } = GITHUB_CONFIG;
+        const url = `https://api.github.com${encodeURI(endpoint)}`;
+
+        const headers = {
+            'Authorization': `token ${githubPat}`,
+            'Accept': 'application/vnd.github.v3+json',
+            ...options.headers,
+        };
+
+        const response = await fetch(url, { ...options, headers });
+
+        if (!response.ok) {
+            if (response.status === 404) return null;
+            const errorText = await response.text();
+            throw new Error(`GitHub API Hatası: ${response.status} - ${errorText.substring(0, 100)}...`);
+        }
+
+        if (response.status === 204) return null;
+
+        return response.json();
+    }
+
+    async function loadNotesFromGithub() {
+        saveStatus.textContent = 'Notlar yükleniyor...';
+        try {
+            const { githubUser, githubRepo } = GITHUB_CONFIG;
+            const filePath = getNoteFilePath(currentUser.username);
+            const endpoint = `/repos/${githubUser}/${githubRepo}/contents/${filePath}`;
+            const data = await githubApiRequest(endpoint);
+
+            if (data && data.content) {
+                fileSha = data.sha;
+                const decodedContent = decodeBase64(data.content);
+                notes = JSON.parse(decodedContent);
+                console.log(`Notlar başarıyla yüklendi: ${filePath}`);
+            } else {
+                notes = [];
+                fileSha = null;
+                console.log(`Kullanıcıya ait not dosyası bulunamadı: ${filePath}. Yeni bir dosya oluşturulacak.`);
+            }
+            renderNotesList();
+            saveStatus.textContent = 'Notlar yüklendi.';
+        } catch (error) {
+            showAppAlert(`Notlar yüklenemedi: ${error.message}.`);
+            saveStatus.textContent = 'Yükleme hatası!';
+            console.error("Yükleme Hatası:", error);
+        }
+    }
+
+    async function saveNotesToGithub() {
+        saveStatus.textContent = 'Kaydediliyor...';
+        try {
+            const { githubUser, githubRepo } = GITHUB_CONFIG;
+            const filePath = getNoteFilePath(currentUser.username);
+            const endpoint = `/repos/${githubUser}/${githubRepo}/contents/${filePath}`;
+
+            // Aktif notun verilerini güncelle
+            const noteToSave = notes.find(n => n.id === activeNoteId);
+            if(noteToSave) {
+                 // Başlık, otomatik olarak noteTitleInput'tan alınır
+                 noteToSave.title = noteTitleInput.value.trim() || 'Başlıksız Not';
+                 noteToSave.content = noteContentInput.innerHTML;
+                 noteToSave.updatedAt = new Date().toISOString();
+            }
+
+            const content = JSON.stringify(notes, null, 2);
+            const encodedContent = encodeBase64(content);
+
+            const body = {
+                message: `[${currentUser.username}] notları güncellendi: ${new Date().toLocaleTimeString('tr-TR')}`,
+                content: encodedContent,
+                sha: fileSha,
+            };
+
+            const data = await githubApiRequest(endpoint, {
+                method: 'PUT',
+                body: JSON.stringify(body),
+            });
+
+            if(data && data.content) {
+                fileSha = data.content.sha;
+            }
+
+            // Listeyi kaydetme sonrası güncelleyelim ki yeni başlık listede görünsün
+            renderNotesList(noteSearchInput.value);
+
+            saveStatus.textContent = `Kaydedildi: ${new Date().toLocaleTimeString('tr-TR')}`;
+        } catch (error) {
+            showAppAlert(`Notlar kaydedilemedi: ${error.message}`, 'Hata');
+            saveStatus.textContent = 'Kaydetme hatası!';
+            console.error("Kaydetme Hatası:", error);
+        }
+    }
+
+    const debouncedSave = () => {
+        if (!activeNoteId) return;
+
+        clearTimeout(saveTimeout);
+        saveStatus.textContent = 'Değişiklikler var...';
+        saveTimeout = setTimeout(saveNotesToGithub, 1500);
+    };
+
+    // --- OTOMATİK BAŞLIK OLUŞTURMA ---
+
+    const autoGenerateTitle = () => {
+        if (!activeNoteId) return;
+
+        const contentHtml = noteContentInput.innerHTML.trim();
+        const note = notes.find(n => n.id === activeNoteId);
+
+        if (!note || !contentHtml) {
+            noteTitleInput.value = 'Başlıksız Not';
+            if (note) note.title = 'Başlıksız Not';
+            debouncedSave();
+            return;
+        }
+
+        // 1. HTML etiketlerini kaldır ve metni al
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = contentHtml;
+        const plainText = tempDiv.textContent || tempDiv.innerText || '';
+
+        // 2. İlk 8 kelimeyi al
+        const maxWords = 8;
+        let titleParts = plainText.trim().split(/\s+/).filter(Boolean); // Boşlukları filtrele
+
+        let title = titleParts.slice(0, maxWords).join(' ');
+
+        // Eğer metin, başlık için seçilen kelime sayısından fazlaysa '...' ekle
+        if (titleParts.length > maxWords) {
+            title += '...';
+        }
+
+        if (title.length === 0) {
+            title = 'Başlıksız Not';
+        }
+
+        // 3. Başlık alanını ve not nesnesini güncelle
+        noteTitleInput.value = title;
+        if (note) {
+            note.title = title;
+            note.content = contentHtml; // İçeriği de not nesnesine kopyala
+            note.updatedAt = new Date().toISOString();
+        }
+
+        // Başlık ve içerik güncellendiği için kaydetme tetiklenmeli
+        debouncedSave();
+    };
+
+
+    // --- NOT YÖNETİMİ VE FİLTRELEME ---
+
+    const renderNotesList = (filter = '') => {
+        notesList.innerHTML = '';
+
+        const filteredNotes = notes.filter(note => {
+            const search = filter.toLowerCase();
+            const title = (note.title || '').toLowerCase();
+            const content = (note.content || '').toLowerCase();
+
+            return title.includes(search) || content.includes(search);
+        });
+
+
+        if (filteredNotes.length === 0) {
+            notesList.innerHTML = `<p class="p-4 text-center text-sm text-slate-500">${filter ? 'Arama sonucu not bulunamadı.' : 'Henüz notunuz yok.'}</p>`;
+            return;
+        }
+
+        const sortedNotes = [...filteredNotes].sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+
+        sortedNotes.forEach(note => {
+            const isActive = note.id === activeNoteId;
+            const item = document.createElement('div');
+            item.className = `note-item p-3 rounded-lg cursor-pointer border-l-4 ${isActive ? 'active border-indigo-400' : 'border-transparent hover:bg-slate-200 dark:hover:bg-slate-700'} transition-all duration-150`;
+            item.dataset.id = note.id;
+
+            const title = note.title.trim() || 'Başlıksız Not';
+            const date = new Date(note.updatedAt).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' });
+
+            item.innerHTML = `
+                <h3 class="font-semibold truncate text-sm">${title}</h3>
+                <p class="text-xs note-date mt-1 ${isActive ? 'text-indigo-200' : 'text-slate-500'}">${date}</p>
+            `;
+            item.addEventListener('click', () => selectNote(note.id));
+            notesList.appendChild(item);
+        });
+    };
+
+    const selectNote = (id) => {
+        if(id === activeNoteId) return; // Zaten seçiliyse tekrar yükleme
+
+        activeNoteId = id;
+        const note = notes.find(n => n.id === id);
+        if (note) {
+            // Notu yüklerken var olan başlık ve içeriği göster
+            noteTitleInput.value = note.title;
+            noteContentInput.innerHTML = note.content;
+            editorPanel.classList.remove('hidden');
+            welcomePanel.classList.add('hidden');
+            renderNotesList(noteSearchInput.value);
+            noteContentInput.focus();
+        }
+    };
+
+    const createNewNote = () => {
+        // Yeni bir not nesnesi oluştur
+        const newNote = {
+            id: `note_${Date.now()}`,
+            title: 'Başlıksız Not',
+            content: '',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+        };
+        notes.unshift(newNote); // Listede en üste ekle
+
+        // 1. Yeni notu aktif olarak ayarla
+        activeNoteId = newNote.id;
+
+        // 2. Düzenleyici ekranını aç ve sıfırla
+        editorPanel.classList.remove('hidden');
+        welcomePanel.classList.add('hidden');
+        noteTitleInput.value = '';
+        noteContentInput.innerHTML = '';
+
+        // 3. Listenin görsel olarak güncellenmesi
+        renderNotesList(noteSearchInput.value);
+
+        // 4. Content alanına odaklanma (Kullanıcının direkt yazmaya başlaması için)
+        noteContentInput.focus();
+
+        // 5. Yeni notun hemen dosyaya kaydedilmesi
+        saveNotesToGithub();
+    };
+
+    const deleteActiveNote = async () => {
+        if (!activeNoteId) return;
+
+        const isConfirmed = await showAppConfirm('Bu notu kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.', 'Notu Sil');
+
+        if (isConfirmed) {
+            notes = notes.filter(n => n.id !== activeNoteId);
+            activeNoteId = null;
+            editorPanel.classList.add('hidden');
+            welcomePanel.classList.remove('hidden');
+
+            // Silme işleminden sonra kaydet
+            saveNotesToGithub().then(() => renderNotesList(noteSearchInput.value));
+            showAppAlert('Not başarıyla silindi.', 'Başarılı');
+        }
+    };
+
+    // --- RİCH TEXT MANTIK (TOOLBAR) ---
+    const formatText = (command, value = null) => {
+        document.execCommand(command, false, value);
+        noteContentInput.focus();
+        // execCommand HTML içeriğini değiştirdiği için kaydetmeyi tetikle
+        autoGenerateTitle();
+    };
+
+    // --- EKRAN GEÇİŞLERİ VE KULLANICI ARAYÜZÜ ---
+
+    const showScreen = (screen) => {
+        [loginScreen, registerScreen, appScreen].forEach(s => {
+            s.classList.add('hidden');
+            s.classList.remove('flex');
+        });
+        screen.classList.remove('hidden');
+        screen.classList.add('flex');
+    };
+
+    const setupAppUI = () => {
+        userNameDisplay.textContent = currentUser.username;
+        userAvatar.textContent = currentUser.username.charAt(0).toUpperCase();
+        loadNotesFromGithub();
+        showScreen(appScreen);
+    };
+
+    // --- AUTHENTICATION MANTIĞI ---
+
+    const handleRegister = async () => {
+        const username = registerUsernameInput.value.trim();
+        const password = registerPasswordInput.value;
+
+        if (!username || !password) {
+            await showAppAlert('Kullanıcı adı ve şifre zorunludur.', 'Hata');
+            return;
+        }
+
+        const users = getUsers();
+        if (users[username]) {
+            await showAppAlert('Bu kullanıcı adı zaten alınmış.', 'Hata');
+            return;
+        }
+
+        users[username] = { username, password };
+        saveUsers(users);
+        await showAppAlert('Kayıt başarılı! Şimdi giriş yapabilirsiniz.', 'Başarılı');
+        showScreen(loginScreen);
+    };
+
+    const handleLogin = async () => {
+        const username = loginUsernameInput.value.trim();
+        const password = loginPasswordInput.value;
+
+        const users = getUsers();
+        const user = users[username];
+
+        if (user && user.password === password) {
+            currentUser = { username: user.username, ...GITHUB_CONFIG };
+            sessionStorage.setItem('notebook_currentUser', JSON.stringify(currentUser));
+            setupAppUI();
+        } else {
+            await showAppAlert('Kullanıcı adı veya şifre hatalı.', 'Giriş Hatası');
+        }
+    };
+
+    const handleLogout = async () => {
+         const isConfirmed = await showAppConfirm('Uygulamadan çıkış yapmak istediğinizden emin misiniz?', 'Çıkış');
+         if (!isConfirmed) return;
+
+        currentUser = null;
+        sessionStorage.removeItem('notebook_currentUser');
+        notes = [];
+        activeNoteId = null;
+        fileSha = null;
+        editorPanel.classList.add('hidden');
+        welcomePanel.classList.remove('hidden');
+        showScreen(loginScreen);
+    };
+
+    const checkSession = () => {
+        setupDarkMode(); // Temayı ayarla
+        const userJson = sessionStorage.getItem('notebook_currentUser');
+        if(userJson) {
+            let sessionUser = JSON.parse(userJson);
+            currentUser = { username: sessionUser.username, ...GITHUB_CONFIG };
+            setupAppUI();
+        } else {
+            showScreen(loginScreen);
+        }
+    };
+
+    // --- EVENT LISTENERS ---
+    showRegisterLink.addEventListener('click', (e) => { e.preventDefault(); showScreen(registerScreen); });
+    showLoginLink.addEventListener('click', (e) => { e.preventDefault(); showScreen(loginScreen); });
+    registerButton.addEventListener('click', handleRegister);
+    loginButton.addEventListener('click', handleLogin);
+    signoutButton.addEventListener('click', handleLogout);
+    darkModeToggle.addEventListener('click', toggleDarkMode); // Dark Mode toggle
+
+    newNoteButton.addEventListener('click', createNewNote);
+    deleteNoteButton.addEventListener('click', deleteActiveNote);
+
+    // Otomatik başlıklandırma ve kaydetme için tek event:
+    noteContentInput.addEventListener('input', autoGenerateTitle);
+    // noteTitleInput artık readonly olduğu için event dinlemesine gerek yok.
+
+    // Arama işlevi için debounced input
+    noteSearchInput.addEventListener('input', () => {
+        clearTimeout(saveTimeout);
+        renderNotesList(noteSearchInput.value);
+    });
+
+    // Toolbar butonları için event listener
+    editorToolbar.addEventListener('click', (e) => {
+        const btn = e.target.closest('.toolbar-btn');
+        if (btn) {
+            const command = btn.dataset.command;
+            formatText(command);
+        }
+    });
+
+    // Uygulamayı başlat
+    checkSession();
+});
+</script>
+
+</body>
+</html>
